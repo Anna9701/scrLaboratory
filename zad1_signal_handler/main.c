@@ -8,7 +8,7 @@
 
 
 static void sigHandler (int sig, siginfo_t *sigInfo, void *context) {
-    printf("\n Signal %d, data %d \n", sig, sigInfo->si_value.sival_int);
+    printf("\nSignal %d, data %d \n", sig, sigInfo->si_value.sival_int);
 }
 
 void* signalHandler(void *args) {
@@ -21,28 +21,30 @@ void* signalHandler(void *args) {
     if (sigaction(SIGRTMIN + *signo, &act, 0) < 0) {
         free(signo);
         perror ("Sigaction");
-        return (void*)1;
+        return (void*) 1;
     }
-    while(1);
     free(signo);
-    return 0;
+    while(1);
+    return (void*) 0;
 }
 
 int main(void) {
-	const int SIZE =  16;
-	int i;
-	pthread_t *threads[SIZE];
+    const int SIZE =  16;
+    int i;
+    pthread_t *threads[SIZE];
     for (i = 0; i < SIZE; ++i) {
         pthread_t *thread = malloc(sizeof(pthread_t));
         int *number = malloc(sizeof(int));
         *number = i;
         threads[i] = thread;
-		int tid = pthread_create(thread, 0,  &signalHandler, number);
-	}
-    while(1);
+        pthread_create(thread, 0,  &signalHandler, number);
+    }
+    for (i = 0; i < SIZE; ++i)
+        pthread_join(*threads[i], NULL);
     for(i = 0; i < SIZE; ++i)
         free(threads[i]);
-	return EXIT_SUCCESS;
+    threads = 0;
+    return EXIT_SUCCESS;
 }
 
 /*
