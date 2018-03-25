@@ -2,49 +2,47 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <signal.h>
-#include <pthread.h>
 #include <unistd.h>
 #include <string.h>
 
+void* signalHandler(void*);
 
-static void sigHandler (int sig, siginfo_t *sigInfo, void *context) {
-    printf("\nSignal %d, data %d \n", sig, sigInfo->si_value.sival_int);
+int main(void) {
+    const unsigned int SIZE =  16;
+    unsigned int i;
+    sigset_t set;
+    pthread_t threads[SIZE];
+    int* number;
+    
+    sigfillset(&set);
+    sigprocmask(SIG_BLOCK, &set, NULL);
+    
+    for (i = 0; i < SIZE; ++i) {
+        number = (int*) malloc(sizeof(int));
+        *number = i;
+        pthread_create(&threads[i], 0,  &signalHandler, number);
+    }
+    
+    for (i = 0; i < SIZE; ++i)
+        pthread_join(threads[i], NULL);
+    
+    return EXIT_SUCCESS;
 }
 
 void* signalHandler(void *args) {
-    struct sigaction act;
-    int *signo = (int*) args;
-    memset(&act, 0, sizeof(act));
-    act.sa_sigaction = &sigHandler;
-    act.sa_flags = SA_SIGINFO;
+    siginfo_t siginfo;
+    sigset_t set;
+    int* signo = (int*) args;
     
-    if (sigaction(SIGRTMIN + *signo, &act, 0) < 0) {
-        free(signo);
-        perror ("Sigaction");
-        return (void*) 1;
+    sigemptyset(&set);
+    sigaddset(&set, SIGRTMIN + *signo);
+    while(true) {
+        sigwaitinfo(&set, &siginfo);
+        printf("\nSignal %d, data %d \n", SIGRTMIN + *signo, sigInfo.si_value.sival_int);
     }
+    
     free(signo);
-    while(1);
     return (void*) 0;
-}
-
-int main(void) {
-    const int SIZE =  16;
-    int i;
-    pthread_t *threads[SIZE];
-    for (i = 0; i < SIZE; ++i) {
-        pthread_t *thread = malloc(sizeof(pthread_t));
-        int *number = malloc(sizeof(int));
-        *number = i;
-        threads[i] = thread;
-        pthread_create(thread, 0,  &signalHandler, number);
-    }
-    for (i = 0; i < SIZE; ++i)
-        pthread_join(*threads[i], NULL);
-    for(i = 0; i < SIZE; ++i)
-        free(threads[i]);
-    threads = 0;
-    return EXIT_SUCCESS;
 }
 
 /*
